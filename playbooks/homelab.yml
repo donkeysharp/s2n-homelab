@@ -1,0 +1,10 @@
+---
+- name: Configure all s2n homelab servers
+  hosts: s2n
+  hosts: all
+  serial: 20
+  become: true
+  gather_facts: true
+
+  roles:
+    - common

@@ -1,0 +1,14 @@
+---
+common_packages:
+  - htop
+  - vim
+  - curl
+  - lm-sensors
+  - tmux
+  - wget
+  - net-tools
+  - dnsutils
+  - git
+
+common_update_cache: true
+common_cache_valid_time: 259200 # 3 days

@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  author: s2n-homelab
+  description: Common base configuration for s2n homelab servers
+  license: MIT
+  min_ansible_version: '2.9'
+
+  platforms:
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+        - trixie
+
+  galaxy_tags:
+    - system
+    - common
+    - base
+
+dependencies: []

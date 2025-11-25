@@ -1,0 +1,18 @@
+---
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: "{{ common_update_cache }}"
+    cache_valid_time: "{{ common_cache_valid_time }}"
+
+- name: Install common packages
+  ansible.builtin.apt:
+    name: "{{ common_packages }}"
+    state: present
+
+- name: Deploy tmux configuration
+  ansible.builtin.template:
+    src: tmux.conf
+    dest: "/home/{{ ansible_user }}/.tmux.conf"
+    mode: '0644'
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"

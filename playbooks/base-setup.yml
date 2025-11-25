@@ -1,0 +1,54 @@
+---
+- name: Setup Ansible user with SSH key authentication
+  hosts: all
+  serial: 20
+  become: yes
+  vars:
+    ansible_ssh_key_file: "{{ playbook_dir }}/../pub_keys/ansible.pub"
+
+  tasks:
+    - name: Create ansible user
+      user:
+        name: "ansible"
+        state: present
+        shell: /bin/bash
+        createhome: yes
+        home: "/home/ansible"
+
+    - name: Add ansible user to sudo group
+      user:
+        name: "ansible"
+        groups: sudo
+        append: yes
+
+    - name: Configure passwordless sudo for ansible user
+      copy:
+        content: "ansible ALL=(ALL) NOPASSWD:ALL\n"
+        dest: "/etc/sudoers.d/ansible"
+        mode: '0440'
+        owner: root
+        group: root
+        validate: 'visudo -cf %s'
+
+    - name: Create .ssh directory for ansible user
+      file:
+        path: "/home/ansible/.ssh"
+        state: directory
+        owner: "ansible"
+        group: "ansible"
+        mode: '0700'
+
+    - name: Check if SSH public key file exists
+      stat:
+        path: "{{ ansible_ssh_key_file }}"
+      become: No
+      connection: local
+      delegate_to: localhost
+      register: ssh_key_file
+
+    - name: Add SSH public key to ansible user
+      authorized_key:
+        user: "ansible"
+        state: present
+        key: "{{ lookup('file', ansible_ssh_key_file) }}"
+      when: ssh_key_file.stat.exists
