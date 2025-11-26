@@ -12,3 +12,4 @@ common_packages:
 
 common_update_cache: true
 common_cache_valid_time: 259200 # 3 days
+is_dell: false

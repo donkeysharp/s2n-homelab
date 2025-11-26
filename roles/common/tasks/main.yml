@@ -16,3 +16,9 @@
     mode: '0644'
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
+
+- name: Install i8kutils only on Dell systems
+  ansible.builtin.apt:
+    name: i8kutils
+    state: present
+  when: is_dell | bool
