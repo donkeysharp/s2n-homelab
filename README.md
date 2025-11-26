@@ -42,6 +42,11 @@ Execute this **only the first time**, so that servers have the minimum connectio
 ansible-playbook playbooks/base-setup.yml -e "ansible_user=<YOUR_INSTALLATION_USER>" -e "ansible_ssh_common_args='-o PreferredAuthentications=password -o PubkeyAuthentication=no'" --ask-pass --ask-become-pass
 ```
 
+### Installing requirements
+```sh
+ansible-playbook install -r requirements.yml
+```
+
 ### Run the main playbook
 ```bash
 ansible-playbook playbooks/homelab.yml
