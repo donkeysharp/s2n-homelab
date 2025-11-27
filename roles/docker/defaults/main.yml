@@ -1,0 +1,4 @@
+---
+debian_version: trixie
+docker_users:
+  - "{{ ansible_user }}"

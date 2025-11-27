@@ -1,0 +1,36 @@
+- block:
+  - name: Add Docker key
+    ansible.builtin.get_url:
+      url: https://download.docker.com/linux/debian/gpg
+      dest: /etc/apt/trusted.gpg.d/docker.asc
+      owner: root
+      group: root
+      mode: '0644'
+
+  - name: Add Docker CE repository
+    ansible.builtin.apt_repository:
+      repo: "deb [arch=amd64] https://download.docker.com/linux/debian {{ debian_version }} stable"
+      filename: docker-ce
+
+  - name: Update repositories
+    ansible.builtin.apt:
+      update_cache: yes
+      cache_valid_time: 3600
+
+  - name: Install Docker CE
+    ansible.builtin.apt:
+      name: "{{ item }}"
+      state: present
+    loop:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+
+  - name: Add users to docker group
+    ansible.builtin.user:
+      name: "{{ item }}"
+      groups: docker
+      append: yes
+    loop: "{{ docker_users }}"
+    become: yes
+    when: docker_users is defined
