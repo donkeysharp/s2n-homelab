@@ -1,0 +1,9 @@
+---
+- name: Install PostgreSQL 18 with Docker Compose
+  hosts: database
+  become: True
+  vars_files:
+    - ../group_vars/database.yml
+  roles:
+    - { role: docker, tags: [docker] }
+    - { role: postgresql, tags: [postgres] }

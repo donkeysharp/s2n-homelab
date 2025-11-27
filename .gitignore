@@ -1,2 +1,3 @@
 # SSH Keys - do not version sensitive keys
 pub_keys/*.pub
+.vault-password
