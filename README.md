@@ -38,12 +38,12 @@ common_packages:
 ### First time setup
 Execute this **only the first time**, so that servers have the minimum connection settings:
 
-```sh
+```bash
 ansible-playbook playbooks/base-setup.yml -e "ansible_user=<YOUR_INSTALLATION_USER>" -e "ansible_ssh_common_args='-o PreferredAuthentications=password -o PubkeyAuthentication=no'" --ask-pass --ask-become-pass
 ```
 
 ### Installing requirements
-```sh
+```bash
 ansible-playbook install -r requirements.yml
 ```
 
@@ -72,4 +72,16 @@ ansible-playbook playbooks/homelab.yml --check
 ### Run with verbose output
 ```bash
 ansible-playbook playbooks/homelab.yml -v
+```
+### Create vault secrets
+```bash
+ansible-vault encrypt_string --vault-password-file .vault-password "secret" --name secret_name
+
+secret_name: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          61336330623430353435626532333037316363623938376566346235393362616362646332396135
+          3166656135653565653533376332366237363830316431340a316265346334646566613462313532
+          61313363366363623636353666626539303030616464613033623337626536663965326164353730
+          3139643537353230640a383931623064663665363865663764666565336136373763333336386439
+          6362
 ```
