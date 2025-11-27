@@ -1,0 +1,26 @@
+---
+-block:
+  - name: Ensure PostgreSQL directories exist
+    ansible.builtin.file:
+      path: "{{ item }}"
+      state: directory
+      mode: '0755'
+      owner: root
+      group: root
+    loop:
+      - "{{ postgresql_compose_dir }}"
+      - "{{ postgresql_data_dir }}"
+      - "{{ postgresql_backup_dir }}"
+    become: yes
+
+  - name: Deploy PostgreSQL docker-compose.yml
+    ansible.builtin.template:
+      src: docker-compose.yml.j2
+      dest: "{{ postgresql_compose_dir }}/docker-compose.yml"
+      mode: '0644'
+    become: yes
+    notify: Restart PostgreSQL
+
+  - name: Start PostgreSQL container
+    ansible.builtin.shell: |
+      docker compose -f "{{ postgresql_compose_dir }}/docker-compose.yml" up -d

@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:{{ postgresql_version }}
+    container_name: {{ postgresql_container_name }}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: {{ postgresql_database }}
+      POSTGRES_USER: {{ postgresql_user }}
+      POSTGRES_PASSWORD: {{ postgresql_password }}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "{{ postgresql_port }}:5432"
+    volumes:
+      - "{{ postgresql_data_dir }}:/var/lib/postgresql/data"
+      - "{{ postgresql_backup_dir }}:/backups"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ postgresql_user }} -d {{ postgresql_database }}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - postgres-network
+
+networks:
+  postgres-network:
+    driver: bridge

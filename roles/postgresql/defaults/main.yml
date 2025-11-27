@@ -1,0 +1,12 @@
+---
+postgresql_version: "18"
+postgresql_port: 5432
+postgresql_database: "myapp"
+postgresql_user: "postgres"
+postgresql_password: "changeme"
+
+postgresql_compose_dir: "/opt/postgresql"
+postgresql_data_dir: "/opt/postgresql/data"
+postgresql_backup_dir: "/opt/postgresql/backups"
+
+postgresql_container_name: "postgresql18"
