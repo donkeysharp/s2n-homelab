@@ -1,5 +1,5 @@
 ---
--block:
+- block:
   - name: Ensure PostgreSQL directories exist
     ansible.builtin.file:
       path: "{{ item }}"
@@ -13,6 +13,11 @@
       - "{{ postgresql_backup_dir }}"
     become: yes
 
+  - name: Install psycopg2
+    ansible.builtin.apt:
+      name: python3-psycopg2
+      state: present
+
   - name: Deploy PostgreSQL docker-compose.yml
     ansible.builtin.template:
       src: docker-compose.yml.j2
@@ -24,3 +29,34 @@
   - name: Start PostgreSQL container
     ansible.builtin.shell: |
       docker compose -f "{{ postgresql_compose_dir }}/docker-compose.yml" up -d
+
+  - name: Wait for PostgreSQL to become available
+    ansible.builtin.wait_for:
+      host: "127.0.0.1"
+      port: 5432
+      delay: 3
+      timeout: 60
+      state: started
+
+  - name: Create database  users
+    community.postgresql.postgresql_user:
+      name: "{{ item.value.username }}"
+      password: "{{ item.value.password }}"
+      login_user: "{{ postgresql_user }}"
+      login_password: "{{ postgresql_password }}"
+      login_host: "localhost"
+      state: present
+    loop: "{{ additional_databases | dict2items }}"
+    no_log: true
+
+  - name: Create databases owned by users
+    community.postgresql.postgresql_db:
+      name: "{{ item.key }}"
+      owner: "{{ item.value.username }}"
+      login_user: "{{ postgresql_user }}"
+      login_password: "{{ postgresql_password }}"
+      login_host: "localhost"
+      state: present
+    loop: "{{ additional_databases | dict2items }}"
+    no_log: true
+
