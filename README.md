@@ -49,7 +49,12 @@ ansible-playbook install -r requirements.yml
 
 ### Run the main playbook
 ```bash
-ansible-playbook playbooks/homelab.yml
+ansible-playbook  playbooks/homelab.yml
+```
+
+### Run database playbook
+```bash
+ansible-playbook --vault-password-file .vault-password playbooks/database.yml
 ```
 
 ### Run against specific host groups
@@ -85,3 +90,35 @@ secret_name: !vault |
           3139643537353230640a383931623064663665363865663764666565336136373763333336386439
           6362
 ```
+
+### Run Specific commands
+```bash
+ansible agent -b -m command -a whoami
+ansible k3s_cluster -b -m command -a whoami
+ansible database -b -m command -a whoami
+ansible agent -b -m command -a whoami
+```
+
+
+## Server organization
+Here are the servers:
+- `frodo`
+  - labels: architecture=x86_64 brand=gmk
+- `samwise`
+  - labels: architecture=x86_64 brand=gmk
+- `aragorn`
+  - labels: architecture=arm brand=rpi3b
+- `legolas`
+  - labels: architecture=arm brand=rpi3b
+- `gimli`
+  - labels: architecture=arm brand=rpi3b
+- `pippin`
+  - labels: architecture=arm brand=rpi3b
+- `merry`
+  - labels: architecture=arm brand=rpi3b
+- `galadriel`
+  - labels: architecture=x86_64 brand=dell
+- `elrond`
+  - labels: architecture=x86_64 brand=dell
+- `arwen`
+  - labels: architecture=x86_64 brand=dell
