@@ -47,7 +47,17 @@ ansible-playbook playbooks/base-setup.yml -e "ansible_user=<YOUR_INSTALLATION_US
 ansible-playbook install -r requirements.yml
 ```
 
-### Run the main playbook
+### Install k3s
+```bash
+ansible-playbook -i inventory/hosts.yml --vault-password-file .vault-password playbooks/k3s_cluster.yml
+```
+
+### Uninstall k3s
+```bash
+ansible-playbook -i inventory/hosts.yml --vault-password-file .vault-password playbooks/k3s_reset.yml
+```
+
+### Run the common setup playbook
 ```bash
 ansible-playbook  playbooks/homelab.yml
 ```
