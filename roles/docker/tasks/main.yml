@@ -9,7 +9,7 @@
 
   - name: Add Docker CE repository
     ansible.builtin.apt_repository:
-      repo: "deb [arch=amd64] https://download.docker.com/linux/debian {{ debian_version }} stable"
+      repo: "deb [arch={{ docker_arch }}] https://download.docker.com/linux/debian {{ debian_version }} stable"
       filename: docker-ce
 
   - name: Update repositories

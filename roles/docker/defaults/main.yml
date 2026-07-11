@@ -1,4 +1,5 @@
 ---
 debian_version: trixie
+docker_arch: amd64
 docker_users:
   - "{{ ansible_user }}"
