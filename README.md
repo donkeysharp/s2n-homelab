@@ -44,7 +44,7 @@ ansible-playbook playbooks/base-setup.yml -e "ansible_user=<YOUR_INSTALLATION_US
 
 ### Installing requirements
 ```bash
-ansible-playbook install -r requirements.yml
+ansible-galaxy collection install -r requirements.yml --force
 ```
 
 ### Install k3s
