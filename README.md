@@ -57,6 +57,15 @@ ansible-playbook -i inventory/hosts.yml --vault-password-file .vault-password pl
 ansible-playbook -i inventory/hosts.yml --vault-password-file .vault-password playbooks/k3s_reset.yml
 ```
 
+After uninstalling, make sure to delete the `kine` table inside the `k3s` database inside postgresql, no need to delete the whole database. So the next time the cluster is created, it works as expected and it does not use any old data.
+
+```sql
+-- pgcli -h <postgres-host> -u <user>
+
+use k3s
+drop table kine
+```
+
 ### Run the common setup playbook
 ```bash
 ansible-playbook  playbooks/homelab.yml
