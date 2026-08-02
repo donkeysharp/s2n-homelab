@@ -1,14 +1,14 @@
 ---
-# - name: Cluster prep
-#   hosts: k3s_cluster
-#   gather_facts: true
-#   become: true
-#   vars_files:
-#     - ../group_vars/k3s_cluster.yml
-#   roles:
-#     - role: k3s.orchestration.prereq
-#     # - role: airgap
-#     - role: k3s.orchestration.raspberrypi
+- name: Cluster prep
+  hosts: k3s_cluster
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../group_vars/k3s_cluster.yml
+  roles:
+    - role: k3s.orchestration.prereq
+    # - role: airgap
+    # - role: k3s.orchestration.raspberrypi
 
 - name: Setup K3S server
   hosts: server
