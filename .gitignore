@@ -1,3 +1,10 @@
 # SSH Keys - do not version sensitive keys
 pub_keys/*.pub
 .vault-password
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+backend.hcl
+terraform.tfvars
