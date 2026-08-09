@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars and adjust.
+aws_region = "us-east-1"
+
+# Names derive from "<name_prefix>-<service_name>", e.g. homelab-s2n-hedgedoc:
+#   bucket -> homelab-s2n-hedgedoc-uploads
+#   user   -> homelab-s2n-hedgedoc-s3
+# name_prefix defaults to the project name. Override any of these if needed:
+# name_prefix   = "homelab-s2n"
+# service_name  = "hedgedoc"
+# bucket_name   = "homelab-s2n-hedgedoc-uploads"   # must be globally unique
+# iam_user_name = "homelab-s2n-hedgedoc-s3"
