@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hedgedoc
+  labels:
+    app: hedgedoc
+data:
+  CMD_DOMAIN: "pad.s2n.donkeysharp.xyz"
+  # For now false untile I have the proper certificates
+  CMD_PROTOCOL_USESSL: "false"
+  CMD_URL_ADDPORT: "false"
+  # Save image uploads to s3
+  CMD_IMAGE_UPLOAD_TYPE: "s3"
+  CMD_S3_REGION: "us-east-1"
+  CMD_S3_BUCKET: "homelab-s2n-hedgedoc-uploads"
+  CMD_S3_FOLDER: "uploads"
+  CMD_S3_PUBLIC_FILES: "true"
