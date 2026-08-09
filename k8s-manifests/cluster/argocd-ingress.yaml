@@ -1,0 +1,32 @@
+# Requires argocd-server running in insecure mode:
+#   kubectl -n argocd patch configmap argocd-cmd-params-cm \
+#     --type merge -p '{"data":{"server.insecure":"true"}}'
+# Traefik v3 terminates TLS and routes gRPC (h2c) and HTTP on the same port.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: argocd-server
+  namespace: argocd
+  labels:
+    app: argocd-server
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`argocd.local`)
+      priority: 10
+      services:
+        - name: argocd-server
+          port: 80
+    # gRPC traffic (argocd CLI) selected by Content-Type, forwarded as h2c
+    - kind: Rule
+      match: Host(`argocd.local`) && Header(`Content-Type`, `application/grpc`)
+      priority: 11
+      services:
+        - name: argocd-server
+          port: 80
+          scheme: h2c
+  # Empty tls -> Traefik serves its default self-signed cert.
+  # Swap for `certResolver` once on the donkeysharp.xyz / LE setup.
+  tls: {}
