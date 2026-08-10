@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: homelab-s2n-wildcard
+  namespace: default
+spec:
+  secretName: homelab-s2n-wildcard-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: "*.s2n.donkeysharp.xyz"
+  dnsNames:
+    - "s2n.donkeysharp.xyz"
+    - "*.s2n.donkeysharp.xyz"

@@ -1,0 +1,29 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: cert-manager
+  namespace: kube-system
+spec:
+  repo: https://charts.jetstack.io
+  chart: cert-manager
+  version: v1.21.1
+  targetNamespace: cert-manager
+  createNamespace: true
+  valuesContent: |-
+    crds:
+      enabled: true
+    # The DNS-01 self-check must not go through the openwrt resolver.
+    # It only knows the .lan domains and will never see the TXT records
+    # for acme-challenge
+    dns01RecursiveNameservers: "1.1.1.1:53,9.9.9.9:53"
+    dns01RecursiveNameserversOnly: true
+    # Make sure to only deploy on amd64, in case we add
+    # raspberry pis in the future
+    nodeSelector:
+      kubernetes.io/arch: amd64
+    webhook:
+      nodeSelector:
+        kubernetes.io/arch: amd64
+    cainjector:
+      nodeSelector:
+        kubernetes.io/arch: amd64

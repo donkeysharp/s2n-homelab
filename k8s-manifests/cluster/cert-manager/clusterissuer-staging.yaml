@@ -1,0 +1,18 @@
+# This issuer is for workflow testing only
+# to test DO dns challenge is working fine
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: serguimant@gmail.com
+    privateKeySecretRef:
+      name: letsencrypt-staging-account-key
+    solvers:
+      - dns01:
+          digitalocean:
+            tokenSecretRef:
+              name: digitalocean-dns
+              key: access-token
