@@ -4,7 +4,13 @@ metadata:
   name: hedgedoc
   labels:
     app: hedgedoc
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: default-redirect-https@kubernetescrd
 spec:
+  tls:
+    - hosts:
+        - pad.s2n.donkeysharp.xyz
+      secretName: homelab-s2n-wildcard-tls
   rules:
     - host: pad.s2n.donkeysharp.xyz
       http:
