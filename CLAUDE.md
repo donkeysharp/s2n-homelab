@@ -23,6 +23,7 @@ Inventory groups (`inventory/hosts.yml`): `x86_64`, `raspberry_pi`, `dell`, `dat
 - `roles/postgresql` — `postgres:18` via docker-compose; creates per-app DBs/users from vault secrets.
 - `group_vars/` — `database.yml` holds vault-encrypted DB passwords + `additional_databases` (k3s, hedgedoc). `k3s_cluster.yml` wires k3s to the external Postgres datastore.
 - `k8s-manifests/` — `hello-world` (http-echo) deploy/service/ingress, used to validate Traefik.
+  - New Kubernetes manifests always go into a `draft/` subdirectory of where they will eventually live — e.g. `k8s-manifests/cluster/cert-manager/draft/`. They are reviewed and copied out by hand. Never write new manifests directly to their final path. The main reason for this is that, as this is a project I use to learn different things and although documentation is read, there is a cognitive debt on letting AI do everything for me in the sense that even though I review, I prefer to go by detail by copying it. Based on this [article](https://explainx.ai/blog/cognitive-debt-retype-llm-code-august-2026) mainly for me to experimient.
 
 ## k3s notes
 
