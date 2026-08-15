@@ -1,0 +1,6 @@
+---
+# Use the official haproxy.debian.net repo, not Debian's repo
+l4_proxy_version: '3.4'
+
+# k3s nodes running traefik: name, address and optionally backup: true
+l4_proxy_servers: []

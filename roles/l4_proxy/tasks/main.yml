@@ -1,0 +1,52 @@
+---
+- name: Validate role configuration
+  ansible.builtin.assert:
+    that: l4_proxy_servers | length > 0
+    fail_msg: "l4_proxy_servers must list at least one node, each with name and address"
+
+- name: Ensure apt keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Install the HAProxy archive keyring
+  ansible.builtin.get_url:
+    url: https://haproxy.debian.net/haproxy-archive-keyring.gpg
+    dest: /etc/apt/keyrings/haproxy-archive-keyring.gpg
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Add the official HAProxy repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by=/etc/apt/keyrings/haproxy-archive-keyring.gpg]
+      https://haproxy.debian.net
+      {{ ansible_facts['distribution_release'] }}-backports-{{ l4_proxy_version }} main
+    filename: haproxy
+    state: present
+    update_cache: true
+
+- name: Install HAProxy
+  ansible.builtin.apt:
+    name: "haproxy={{ l4_proxy_version }}.*"
+    state: present
+
+- name: Deploy the HAProxy configuration
+  ansible.builtin.template:
+    src: haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    owner: root
+    group: root
+    mode: '0644'
+    validate: haproxy -c -f %s
+  notify: Restart HAProxy
+
+- name: Enable and start HAProxy
+  ansible.builtin.systemd:
+    name: haproxy
+    enabled: true
+    state: started

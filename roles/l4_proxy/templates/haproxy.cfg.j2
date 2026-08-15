@@ -1,0 +1,36 @@
+# Managed by Ansible (roles/l4_proxy) - do not edit by hand
+global
+    log /dev/log local0
+    maxconn 20000
+
+defaults
+    mode tcp
+    log global
+    option tcplog
+    timeout connect 5s
+    timeout client  50s
+    timeout server  50s
+
+# ---- HTTPS (443) ----
+frontend https_in
+    bind :443
+    default_backend traefik_https
+
+backend traefik_https
+    balance roundrobin
+    option tcp-check
+{% for server in l4_proxy_servers %}
+    server {{ '%-10s' | format(server.name) }} {{ server.address }}:443 check send-proxy-v2{{ ' backup' if server.backup | default(false) else '' }}
+{% endfor %}
+
+# HTTP (80) - lets Traefik do the http->https redirect
+frontend http_in
+    bind :80
+    default_backend traefik_http
+
+backend traefik_http
+    balance roundrobin
+    option tcp-check
+{% for server in l4_proxy_servers %}
+    server {{ '%-10s' | format(server.name) }} {{ server.address }}:80 check send-proxy-v2{{ ' backup' if server.backup | default(false) else '' }}
+{% endfor %}
