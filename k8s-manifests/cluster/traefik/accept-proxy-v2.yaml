@@ -1,0 +1,40 @@
+# This configuration is required to accept traffic from
+# our public endpoint via the site-to-site vpn
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    logs:
+      access:
+        enabled: true
+        format: json
+    ports:
+      web:
+        proxyProtocol:
+          trustedIPs:
+            - "10.42.0.0/16"
+            - "10.43.0.0/16"
+            - "192.168.175.0/24"
+            - "10.10.10.0/24"
+        forwardedHeaders:
+          trustedIPs:
+            - "10.42.0.0/16"
+            - "10.43.0.0/16"
+            - "192.168.175.0/24"
+            - "10.10.10.0/24"
+      websecure:
+        proxyProtocol:
+          trustedIPs:
+            - "10.42.0.0/16"
+            - "10.43.0.0/16"
+            - "192.168.175.0/24"
+            - "10.10.10.0/24"
+        forwardedHeaders:
+          trustedIPs:
+            - "10.42.0.0/16"
+            - "10.43.0.0/16"
+            - "192.168.175.0/24"
+            - "10.10.10.0/24"
