@@ -1,0 +1,41 @@
+---
+- name: Configure WireGuard tunnel
+  hosts: vpn
+  become: true
+  gather_facts: true
+
+  roles:
+    # internally this role will handle client needing server's pub key and
+    # server needing client's pub key. Using ansible linear execution (default)
+    # and using facts
+    - wireguard
+
+- name: Configure the LAN gateway end of the tunnel
+  hosts: vpn_client
+  become: true
+  gather_facts: false
+  vars:
+    vpn_subnet: 10.10.10.0/24
+    lan_subnet: 192.168.175.0/24
+
+  tasks:
+    # Use the local network endpoint (galadriel) to run as a NAT gateway
+    - name: Masquerade tunnel traffic entering the LAN
+      ansible.builtin.iptables:
+        table: nat
+        chain: POSTROUTING
+        source: "{{ vpn_subnet }}"
+        destination: "{{ lan_subnet }}"
+        jump: MASQUERADE
+        comment: site-to-site subnet gateway
+        action: append
+        state: present
+
+    - name: Restore saved rules at boot
+      ansible.builtin.systemd:
+        name: netfilter-persistent
+        enabled: true
+
+    - name: Persist the live ruleset
+      ansible.builtin.command: netfilter-persistent save
+      changed_when: false
