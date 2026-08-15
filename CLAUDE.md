@@ -19,11 +19,12 @@ Inventory groups (`inventory/hosts.yml`): `x86_64`, `raspberry_pi`, `dell`, `dat
 
 ## Layout
 
-- `playbooks/` — `base-setup.yml` (one-time bootstrap: creates `ansible` user + SSH key), `homelab.yml` (common role on `s2n`), `database.yml` (Postgres on `galadriel`), `k3s_cluster.yml` / `k3s_reset.yml` (k3s via upstream collection), `site-to-site-vpn.yml` (WireGuard + the gateway NAT rule), `debug.yml`.
+- `playbooks/` — `base-setup.yml` (one-time bootstrap: creates `ansible` user + SSH key), `homelab.yml` (common role on `s2n`), `database.yml` (Postgres on `galadriel`), `k3s_cluster.yml` / `k3s_reset.yml` (k3s via upstream collection), `site-to-site-vpn.yml` (WireGuard, the public HAProxy, and the gateway NAT rule), `debug.yml`.
 - `roles/common` — base packages + tmux config; `i8kutils` on Dell only.
 - `roles/docker` — Docker CE install. `docker_arch` defaults to `amd64` (only x86_64 use case needed).
 - `roles/postgresql` — `postgres:18` via docker-compose; creates per-app DBs/users from vault secrets.
 - `roles/wireguard` — one tunnel endpoint, server or client per `wireguard_mode`. Generates its keypair once and installs `iptables` + `iptables-persistent`.
+- `roles/l4_proxy` — HAProxy in TCP mode on `palantir`, from the official `haproxy.debian.net` repo (major version pinned by `l4_proxy_version`), not Debian's. The config is fixed — 443 and 80 forwarded to Traefik with PROXY protocol v2 — and `l4_proxy_servers` is the only input.
 - `group_vars/` — `database.yml` holds vault-encrypted DB passwords + `additional_databases` (k3s, hedgedoc). `k3s_cluster.yml` wires k3s to the external Postgres datastore.
 - `inventory/host_vars/` — per-host vars (`palantir.yml`, `galadriel.yml` carry the WireGuard addresses and peer lists).
 
@@ -46,6 +47,7 @@ Root `group_vars/` is **not** auto-loaded. Ansible only picks up `group_vars/`/`
 - Tunnel `wg0` on `10.10.10.0/24` — `palantir` is `.1` (server, listens on UDP 51820), `galadriel` is `.2` (client, keepalive 25 since it is behind NAT).
 - `galadriel` is the subnet gateway for the LAN `192.168.175.0/24`: palantir's peer `AllowedIPs` carries that CIDR, and galadriel forwards plus MASQUERADEs it so replies come back through the tunnel instead of to the OpenWrt router. The NAT rule lives in `playbooks/site-to-site-vpn.yml`, tagged with the iptables comment `site-to-site subnet gateway`.
 - Both ends must stay in the **same play**. Each host generates its keypair, publishes the public key as a fact, and only then renders its config, reading the peer's key from `hostvars`. Splitting into per-mode plays, adding `serial:`, or `--limit`-ing one end breaks the exchange — the role asserts instead of writing a config with a missing peer.
+- `palantir` also runs HAProxy (`roles/l4_proxy`) as the public entry point: 80/443 are load balanced over the tunnel to Traefik on the k3s node IPs, listed in `inventory/host_vars/palantir.yml`.
 - Private keys are generated on the host with `creates:` and never regenerated or copied to the control node's fact cache. A peer can also be given a literal `public_key` instead of a `host`, for endpoints Ansible does not manage.
 
 ## Secrets
