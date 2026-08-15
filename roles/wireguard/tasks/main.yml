@@ -1,0 +1,122 @@
+---
+- name: Validate role configuration
+  ansible.builtin.assert:
+    that:
+      - wireguard_mode in ['server', 'client']
+      - wireguard_address | length > 0
+    fail_msg: "wireguard_mode must be 'server' or 'client' and wireguard_address must be set"
+
+- name: Validate peer definitions
+  ansible.builtin.assert:
+    that:
+      - item.allowed_ips is defined
+      - item.public_key is defined or item.host is defined
+    fail_msg: "peer '{{ item.name | default('unnamed') }}' needs allowed_ips plus either public_key or host"
+  loop: "{{ wireguard_peers }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed') }}"
+
+- name: Install WireGuard packages
+  ansible.builtin.apt:
+    name: "{{ wireguard_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install iptables and rule persistence
+  ansible.builtin.apt:
+    name: "{{ wireguard_iptables_packages }}"
+    state: present
+  when: wireguard_install_iptables | bool
+
+- name: Ensure WireGuard directory exists
+  ansible.builtin.file:
+    path: "{{ wireguard_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Generate private key
+  ansible.builtin.shell:
+    cmd: "umask 077 && wg genkey > {{ wireguard_private_key_file }}"
+    creates: "{{ wireguard_private_key_file }}"
+
+- name: Read private key
+  ansible.builtin.slurp:
+    src: "{{ wireguard_private_key_file }}"
+  register: wireguard_private_key_slurp
+  no_log: true
+
+- name: Derive public key
+  ansible.builtin.command:
+    cmd: wg pubkey
+    stdin: "{{ wireguard_private_key_slurp.content | b64decode | trim }}"
+  register: wireguard_pubkey_cmd
+  changed_when: false
+  no_log: true
+
+# Published as facts so the other end of the tunnel can pick the public key up
+# from hostvars. Every host in the play reaches this point before any of them
+# renders its config, so both ends can reference each other.
+- name: Publish key material as host facts
+  ansible.builtin.set_fact:
+    wireguard_private_key: "{{ wireguard_private_key_slurp.content | b64decode | trim }}"
+    wireguard_public_key: "{{ wireguard_pubkey_cmd.stdout | trim }}"
+  no_log: true
+
+- name: Store public key for reference
+  ansible.builtin.copy:
+    content: "{{ wireguard_public_key }}\n"
+    dest: "{{ wireguard_public_key_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Resolve peer public keys
+  ansible.builtin.set_fact:
+    wireguard_resolved_peers: >-
+      {{ wireguard_resolved_peers | default([]) + [item | combine({
+        'public_key': item.public_key if item.public_key is defined
+                      else hostvars[item.host].wireguard_public_key | default('')
+      })] }}
+  loop: "{{ wireguard_peers }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed') }}"
+
+- name: Assert every peer public key was resolved
+  ansible.builtin.assert:
+    that: item.public_key | length > 0
+    fail_msg: >-
+      No public key for peer '{{ item.name | default('unnamed') }}'.
+      Host '{{ item.host | default('?') }}' must be part of this same play,
+      or set public_key explicitly.
+  loop: "{{ wireguard_resolved_peers | default([]) }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed') }}"
+
+- name: Enable IPv4 forwarding
+  ansible.builtin.copy:
+    content: "net.ipv4.ip_forward = 1\n"
+    dest: /etc/sysctl.d/99-wireguard.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload sysctl
+  when: wireguard_forward | bool
+
+- name: Deploy interface configuration
+  ansible.builtin.template:
+    src: wg.conf.j2
+    dest: "{{ wireguard_config_file }}"
+    owner: root
+    group: root
+    mode: '0600'
+  notify: Restart WireGuard
+
+- name: Enable and start wg-quick
+  ansible.builtin.systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+    enabled: "{{ wireguard_service_enabled }}"
+    state: "{{ wireguard_service_state }}"
+    daemon_reload: true

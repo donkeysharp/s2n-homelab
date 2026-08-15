@@ -1,0 +1,42 @@
+---
+wireguard_mode: client # server | client
+wireguard_interface: wg0
+wireguard_dir: /etc/wireguard
+wireguard_packages:
+  - wireguard
+  - wireguard-tools
+
+wireguard_iptables_packages:
+  - iptables
+  - iptables-persistent
+wireguard_install_iptables: true
+
+wireguard_private_key_file: "{{ wireguard_dir }}/{{ wireguard_interface }}.key"
+wireguard_public_key_file: "{{ wireguard_dir }}/{{ wireguard_interface }}.pub"
+wireguard_config_file: "{{ wireguard_dir }}/{{ wireguard_interface }}.conf"
+
+# Tunnel address of this host, with prefix: 10.10.10.1/24 on the server,
+# 10.10.10.2/32 on a client
+wireguard_address: ""
+
+# Servers listen on a fixed port; clients use an ephemeral source port
+wireguard_listen_port: "{{ 51820 if wireguard_mode == 'server' else '' }}"
+
+# Only clients behind NAT need to keep the mapping alive
+wireguard_persistent_keepalive: "{{ 25 if wireguard_mode == 'client' else '' }}"
+
+wireguard_mtu: ""
+wireguard_dns: ""
+
+# Each peer: name, allowed_ips (list) and either host (inventory hostname whose
+# public key is read from hostvars) or public_key (literal, for unmanaged peers
+# such as a phone). Optional: endpoint, persistent_keepalive.
+wireguard_peers: []
+
+wireguard_forward: "{{ wireguard_mode == 'server' }}"
+
+wireguard_postup: []
+wireguard_postdown: []
+
+wireguard_service_enabled: true
+wireguard_service_state: started
