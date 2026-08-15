@@ -1,0 +1,13 @@
+---
+wireguard_mode: client
+wireguard_address: 10.10.10.2/32
+
+# Gateway for the LAN subnet reachable through this tunnel
+wireguard_forward: true
+
+wireguard_peers:
+  - name: palantir
+    host: palantir
+    endpoint: palantir.s2n.donkeysharp.xyz:51820
+    allowed_ips:
+      - 10.10.10.0/24
