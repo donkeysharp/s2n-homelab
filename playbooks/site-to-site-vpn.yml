@@ -10,6 +10,14 @@
     # and using facts
     - wireguard
 
+- name: Configure the public L4 proxy
+  hosts: vpn_server
+  become: true
+  gather_facts: true
+
+  roles:
+    - l4_proxy
+
 - name: Configure the LAN gateway end of the tunnel
   hosts: vpn_client
   become: true
