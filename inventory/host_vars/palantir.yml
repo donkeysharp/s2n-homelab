@@ -8,18 +8,34 @@ wireguard_peers:
     allowed_ips:
       - 10.10.10.2/32
       - 192.168.175.0/24
+  - name: frodo
+    host: frodo
+    allowed_ips:
+      - 10.10.10.3/32
+  - name: samwise
+    host: samwise
+    allowed_ips:
+      - 10.10.10.4/32
+  - name: elrond
+    host: elrond
+    allowed_ips:
+      - 10.10.10.5/32
+  - name: arwen
+    host: arwen
+    allowed_ips:
+      - 10.10.10.6/32
 
 # k3s nodes reached over the tunnel. galadriel is the control plane, so it only
 # takes traffic when every agent is down
 l4_proxy_servers:
   - name: frodo
-    address: 192.168.175.10
+    address: 10.10.10.3
   - name: samwise
-    address: 192.168.175.11
+    address: 10.10.10.4
   - name: elrond
-    address: 192.168.175.18
+    address: 10.10.10.5
   - name: arwen
-    address: 192.168.175.19
+    address: 10.10.10.6
   - name: galadriel
-    address: 192.168.175.17
+    address: 10.10.10.2
     backup: true

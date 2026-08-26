@@ -19,7 +19,7 @@
     - l4_proxy
 
 - name: Configure the LAN gateway end of the tunnel
-  hosts: vpn_client
+  hosts: galadriel
   become: true
   gather_facts: false
   vars:

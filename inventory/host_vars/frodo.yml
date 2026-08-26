@@ -1,0 +1,10 @@
+---
+wireguard_mode: client
+wireguard_address: 10.10.10.3/32
+
+wireguard_peers:
+  - name: palantir
+    host: palantir
+    endpoint: palantir.s2n.donkeysharp.xyz:51820
+    allowed_ips:
+      - 10.10.10.0/24
