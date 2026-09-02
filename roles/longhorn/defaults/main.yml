@@ -1,0 +1,9 @@
+---
+# required by longhorn data engine v1
+longhorn_packages:
+  - open-iscsi
+  - cryptsetup
+  - dmsetup
+
+# Replica data location
+longhorn_data_path: /var/lib/longhorn

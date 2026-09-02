@@ -1,0 +1,4 @@
+---
+- name: Load iscsi_tcp
+  ansible.builtin.command: modprobe iscsi_tcp
+  changed_when: true

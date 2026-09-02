@@ -1,0 +1,49 @@
+---
+# although not in the groups, make sure it is only for x86-64
+- name: Validate the node can run Longhorn
+  ansible.builtin.assert:
+    that: ansible_facts['architecture'] == 'x86_64'
+    fail_msg: "Longhorn only runs on the x86_64 nodes, not {{ ansible_facts['architecture'] }}"
+
+- name: Check for multipathd
+  ansible.builtin.stat:
+    path: /usr/sbin/multipathd
+  register: longhorn_multipathd
+
+# Fail if multipath installed
+- name: Fail when multipathd is present
+  ansible.builtin.fail:
+    msg: >-
+      multipath-tools is installed on {{ inventory_hostname }}. Blacklist the
+      Longhorn devices in /etc/multipath.conf or remove the package.
+  when: longhorn_multipathd.stat.exists
+
+- name: Install Longhorn host dependencies
+  ansible.builtin.apt:
+    name: "{{ longhorn_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Load the iscsi_tcp module at boot
+  ansible.builtin.copy:
+    content: "iscsi_tcp\n"
+    dest: /etc/modules-load.d/longhorn-iscsi.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Load iscsi_tcp
+
+- name: Enable and start iscsid
+  ansible.builtin.systemd:
+    name: iscsid
+    enabled: true
+    state: started
+
+- name: Create the Longhorn data directory
+  ansible.builtin.file:
+    path: "{{ longhorn_data_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
