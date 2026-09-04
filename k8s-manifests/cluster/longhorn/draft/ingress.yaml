@@ -1,0 +1,27 @@
+# The Longhorn UI ships with no authentication of any kind, and it can delete
+# every volume in the cluster. lh.s2n.donkeysharp.xyz must resolve on OpenWrt
+# only -- do NOT create an A record for it in the DigitalOcean zone, or palantir
+# will happily proxy it to the internet.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: longhorn-ui
+  namespace: longhorn-system
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: default-redirect-https@kubernetescrd
+spec:
+  tls:
+    - hosts:
+        - lh.s2n.donkeysharp.xyz
+      secretName: homelab-s2n-wildcard-tls
+  rules:
+    - host: lh.s2n.donkeysharp.xyz
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: longhorn-frontend
+                port:
+                  number: 80

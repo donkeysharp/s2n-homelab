@@ -11,20 +11,23 @@ Hostnames resolve via `.lan` through an OpenWrt router (local DNS — nothing to
 | `frodo`, `samwise` | x86_64 | GMK mini-PC | k3s agents |
 | `galadriel` | x86_64 | Dell OptiPlex | k3s server + PostgreSQL host |
 | `elrond`, `arwen` | x86_64 | Dell OptiPlex | k3s agents; get `i8kutils` |
-| `aragorn`, `legolas`, `gimli`, `pippin`, `merry` | ARM | RPi 3B | k3s agents |
+| `aragorn`, `legolas`, `gimli`, `pippin`, `merry` | ARM | RPi 3B | idle — no longer in the cluster |
+
+The RPis were k3s agents once but are **not** cluster members any more, and `s2n` no longer includes them either, so `homelab.yml` does not touch them. Anything cluster-wide (k3s, Longhorn, cert-manager) is x86_64-only.
 
 Outside the fleet: `palantir`, a public VPS at `palantir.s2n.donkeysharp.xyz` (user `ansible`, no `.lan` name). It is not in `s2n` and gets none of the fleet-wide roles — it exists only as the public end of the site-to-site VPN.
 
-Inventory groups (`inventory/hosts.yml`): `x86_64`, `raspberry_pi`, `dell`, `database`, `s2n` (= x86_64 + raspberry_pi, covers all 10), `k3s_cluster` (`server` + `agent`), and `vpn` (`vpn_server` = palantir, `vpn_client` = galadriel). Dell hosts are members of both `dell` and `x86_64`.
+Inventory groups (`inventory/hosts.yml`): `x86_64`, `raspberry_pi`, `dell`, `database`, `s2n` (= x86_64 only, the 5 Intel boxes), `k3s_cluster` (`server` = galadriel, `agent` = frodo, samwise, elrond, arwen), and `vpn` (`vpn_server` = palantir, `vpn_client` = galadriel). Dell hosts are members of both `dell` and `x86_64`.
 
 ## Layout
 
-- `playbooks/` — `base-setup.yml` (one-time bootstrap: creates `ansible` user + SSH key), `homelab.yml` (common role on `s2n`), `database.yml` (Postgres on `galadriel`), `k3s_cluster.yml` / `k3s_reset.yml` (k3s via upstream collection), `site-to-site-vpn.yml` (WireGuard, the public HAProxy, and the gateway NAT rule), `debug.yml`.
+- `playbooks/` — `base-setup.yml` (one-time bootstrap: creates `ansible` user + SSH key), `homelab.yml` (common role on `s2n`), `database.yml` (Postgres on `galadriel`), `k3s_cluster.yml` / `k3s_reset.yml` (k3s via upstream collection), `site-to-site-vpn.yml` (WireGuard, the public HAProxy, and the gateway NAT rule), `longhorn.yml` (host prereqs on `k3s_cluster`), `debug.yml`.
 - `roles/common` — base packages + tmux config; `i8kutils` on Dell only.
 - `roles/docker` — Docker CE install. `docker_arch` defaults to `amd64` (only x86_64 use case needed).
 - `roles/postgresql` — `postgres:18` via docker-compose; creates per-app DBs/users from vault secrets.
 - `roles/wireguard` — one tunnel endpoint, server or client per `wireguard_mode`. Generates its keypair once and installs `iptables` + `iptables-persistent`.
 - `roles/l4_proxy` — HAProxy in TCP mode on `palantir`, from the official `haproxy.debian.net` repo (major version pinned by `l4_proxy_version`), not Debian's. The config is fixed — 443 and 80 forwarded to Traefik with PROXY protocol v2 — and `l4_proxy_servers` is the only input.
+- `roles/longhorn` — host prerequisites only (`open-iscsi` + `iscsid`, `cryptsetup`, `dmsetup`, the data dir). No `nfs-common`, so RWO volumes only — RWX would need it added. Longhorn itself is installed into the cluster from `k8s-manifests/`, not by Ansible.
 - `group_vars/` — `database.yml` holds vault-encrypted DB passwords + `additional_databases` (k3s, hedgedoc). `k3s_cluster.yml` wires k3s to the external Postgres datastore.
 - `inventory/host_vars/` — per-host vars (`palantir.yml`, `galadriel.yml` carry the WireGuard addresses and peer lists).
 
@@ -40,7 +43,18 @@ Root `group_vars/` is **not** auto-loaded. Ansible only picks up `group_vars/`/`
 - Ships Traefik as the default ingress controller plus klipper-lb (ServiceLB), so ports 80/443 answer on every node IP. An `Ingress` with a `host:` rule routes by hostname. To reach by name, add DNS on OpenWrt (or a client `/etc/hosts` / `Host:` header) pointing the hostname at any node IP.
 - When resetting the cluster, also wipe the k3s Postgres database — otherwise stale state breaks the new cluster.
 - Do NOT set a custom `token` var in `group_vars/k3s_cluster.yml` — it caused node-join failures. Leave it unset.
-- RPi nodes need cgroups enabled in `cmdline.txt` (`cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory`). See `notes/todo.md`.
+- 5 nodes, all x86_64; galadriel is tainted, so 4 are schedulable.
+- `local-path` is the default StorageClass and stays that way. Longhorn is opt-in per PVC via `storageClassName: longhorn`.
+- If the RPis are ever re-added: they need cgroups enabled in `cmdline.txt` (`cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory`, see `notes/todo.md`), and every chart here pins `kubernetes.io/arch: amd64` so nothing would schedule on them without changes.
+
+## Longhorn
+
+- Distributed block storage on the 4 schedulable nodes, installed via the k3s helm-controller (`k8s-manifests/cluster/longhorn/`). See the README there for the install order and the S3 backup setup.
+- Replica data sits on the **root disk** at `/var/lib/longhorn` — a deliberate simplification. `storageMinimalAvailablePercentage: 25` keeps a full volume from taking a node's OS with it. Replica count is 2.
+- Node selectors are set in two places: `global.nodeSelector` covers the manager/driver/UI, `defaultSettings.systemManagedComponentsNodeSelector` covers instance-manager, CSI driver and engine images. Both must be set at install time — changing them later restarts everything and only applies fully with all volumes detached.
+- The UI has **no authentication**. `lh.s2n.donkeysharp.xyz` must exist in OpenWrt DNS only; an A record in the DigitalOcean zone would put it on the internet through palantir's HAProxy.
+- Deleting the `HelmChart` resource uninstalls Longhorn and its volumes. `failurePolicy: abort` stops a failed install from doing the same on its own.
+- Backups are not configured (commented `backupTarget` in the chart values), consistent with the Postgres stance.
 
 ## Site-to-site VPN
 
@@ -72,8 +86,11 @@ ansible-playbook -i inventory/hosts.yml --vault-password-file .vault-password pl
 # Site-to-site VPN (both ends, single run)
 ansible-playbook playbooks/site-to-site-vpn.yml
 
+# Longhorn host prerequisites (run before applying the manifests)
+ansible-playbook playbooks/longhorn.yml
+
 # Target subsets
-ansible-playbook playbooks/homelab.yml --limit raspberry_pi
+ansible-playbook playbooks/homelab.yml --limit dell
 ansible-playbook playbooks/homelab.yml --limit frodo --check
 ```
 

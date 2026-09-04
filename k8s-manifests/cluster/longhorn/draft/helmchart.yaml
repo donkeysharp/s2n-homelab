@@ -1,0 +1,46 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: longhorn
+  namespace: kube-system
+spec:
+  repo: https://charts.longhorn.io
+  chart: longhorn
+  version: 1.12.1
+  targetNamespace: longhorn-system
+  createNamespace: true
+  # On a failed install helm-controller's default is to uninstall the release,
+  # which for a storage driver would take the volumes with it. abort makes it
+  # retry instead and leaves room to fix whatever broke.
+  failurePolicy: abort
+  valuesContent: |-
+    # Only deploy on amd64. The rpi nodes are out of the cluster and Longhorn
+    # does not support armv7 anyway.
+    global:
+      nodeSelector:
+        kubernetes.io/arch: amd64
+
+    persistence:
+      # k3s local-path stays the cluster default; PVCs ask for longhorn by name
+      defaultClass: false
+      defaultClassReplicaCount: 2
+
+    defaultSettings:
+      defaultDataPath: /var/lib/longhorn
+      # Replica data shares the root disk, so keep a wide margin. A volume
+      # filling up must not take the node's OS down with it.
+      storageMinimalAvailablePercentage: 25
+      # 4 schedulable nodes (galadriel is tainted), 2 replicas is enough here
+      defaultReplicaCount: 2
+      # Instance manager, CSI driver and engine images are system-managed and
+      # are not covered by global.nodeSelector -- they need this separately.
+      systemManagedComponentsNodeSelector: "kubernetes.io/arch:amd64"
+      # Default reserves 12% of allocatable cpu on every node, permanently
+      guaranteedInstanceManagerCpu: 5
+
+      # Backups. Longhorn replicas are availability, not backup -- three copies
+      # of a deleted PVC is three copies of nothing. Uncomment once a bucket
+      # exists, along with the secret described in the README.
+      # backupTarget: s3://<bucket>@<region>/
+      # backupTargetCredentialSecret: longhorn-backup-secret
+      # backupstorePollInterval: 300

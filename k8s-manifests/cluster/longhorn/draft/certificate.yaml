@@ -1,0 +1,15 @@
+# The wildcard in the default namespace cannot be shared across namespaces,
+# so longhorn-system issues its own cert for just this host.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: longhorn-ui
+  namespace: longhorn-system
+spec:
+  secretName: homelab-s2n-wildcard-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: lh.s2n.donkeysharp.xyz
+  dnsNames:
+    - lh.s2n.donkeysharp.xyz

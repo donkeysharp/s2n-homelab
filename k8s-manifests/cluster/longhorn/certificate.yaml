@@ -1,0 +1,13 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: longhorn-ui
+  namespace: longhorn-system
+spec:
+  secretName: homelabl-s2n-wildcard-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: lh.s2n.donkeysharp.xyz
+  dnsNames:
+    - lh.s2n.donkeysharp.xyz

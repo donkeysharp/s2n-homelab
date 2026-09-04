@@ -1,0 +1,32 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: longhorn
+  namespace: kube-system
+spec:
+  repo: https://charts.longhorn.io
+  chart: longhorn
+  version: 1.12.1
+  targetNamespace: longhorn-system
+  createNamespace: true
+  failurePolicy: abort # required to prevent data loss
+  valuesContent: |-
+    global:
+      nodeSelector:
+        kubernetes.io/arch: amd64
+
+    persistence:
+      # keep k3s default class
+      defaultClass: false
+      defaultClassReplicaCount: 2
+
+    defaultSettings:
+      defaultDataPath: /var/lib/longhorn
+      # As we are using root disk, so limit max usage
+      storageMinimalAvailablePercentage: 25
+      defaultReplicaCount: 2
+
+    systemManagedComponentsNodeSelector: "kubernetes.io/arch:amd64"
+    guaranteedInstanceManagerCpu: 5
+
+

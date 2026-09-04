@@ -39,7 +39,7 @@ DigitalOcean DNS. DNS-01 is the right fit here: nothing in the homelab is
 reachable from the internet, and it is the only challenge type that can issue
 wildcards. The DigitalOcean solver is built into cert-manager, no webhook needed.
 
-Manifests live in `cluster/cert-manager/draft/`.
+Manifests live in `cluster/cert-manager/`.
 
 ### Prerequisites
 
@@ -53,15 +53,15 @@ Manifests live in `cluster/cert-manager/draft/`.
 
 ```bash
 # cert-manager itself, through the k3s built-in helm-controller
-kubectl apply -f cluster/cert-manager/draft/helmchart.yaml
+kubectl apply -f cluster/cert-manager/helmchart.yaml
 kubectl -n cert-manager rollout status deploy/cert-manager --timeout=5m
 
 # DigitalOcean token, created by hand -- never committed
 kubectl -n cert-manager create secret generic digitalocean-dns \
   --from-literal=access-token='<DO_API_TOKEN>'
 
-kubectl apply -f cluster/cert-manager/draft/clusterissuer-staging.yaml
-kubectl apply -f cluster/cert-manager/draft/clusterissuer-prod.yaml
+kubectl apply -f cluster/cert-manager/clusterissuer-staging.yaml
+kubectl apply -f cluster/cert-manager/clusterissuer-prod.yaml
 kubectl get clusterissuer   # both should report READY=True
 ```
 
@@ -109,6 +109,71 @@ minutes, so a challenge briefly stuck in `pending` is normal. The chart sets
 `dns01RecursiveNameserversOnly` so the self-check queries 1.1.1.1 directly rather
 than the OpenWrt resolver, which only knows the `.lan` view and would never see
 the record.
+
+## Longhorn
+
+Distributed block storage, installed through the k3s helm-controller. Manifests
+live in `cluster/longhorn/`.
+
+### Prerequisites
+
+Longhorn's V1 data engine needs packages on the host that no manifest can
+install — `open-iscsi` (with `iscsid` running), `cryptsetup` and `dmsetup`. Run
+the Ansible role first:
+
+```bash
+ansible-playbook playbooks/longhorn.yml
+```
+
+### Install
+
+```bash
+kubectl apply -f cluster/longhorn/helmchart.yaml
+kubectl -n longhorn-system rollout status daemonset/longhorn-manager --timeout=10m
+
+kubectl apply -f cluster/longhorn/certificate.yaml
+kubectl apply -f cluster/longhorn/ingress.yaml
+```
+
+Add an `lh.s2n.donkeysharp.xyz` host entry on OpenWrt pointing at any node IP.
+**Do not** add that record to the DigitalOcean zone: the Longhorn UI has no
+authentication and can delete every volume in the cluster, and palantir's
+HAProxy would forward it straight to the internet.
+
+### Storage class
+
+`local-path` stays the cluster default. Longhorn volumes are opt-in, so PVCs
+have to name it:
+
+```yaml
+spec:
+  storageClassName: longhorn
+```
+
+### Backups
+
+Not configured. Uncomment `backupTarget` / `backupTargetCredentialSecret` in
+`helmchart.yaml` and create the credentials in `longhorn-system`:
+
+```bash
+kubectl -n longhorn-system create secret generic longhorn-backup-secret \
+  --from-literal=AWS_ACCESS_KEY_ID='<KEY>' \
+  --from-literal=AWS_SECRET_ACCESS_KEY='<SECRET>' \
+  --from-literal=AWS_ENDPOINTS='https://<endpoint>'   # only for S3-compatible
+```
+
+`AWS_ENDPOINTS` is what points this at a non-AWS provider (DigitalOcean Spaces,
+Backblaze B2, MinIO). Leave it out for real S3.
+
+### Notes
+
+- Deleting the `HelmChart` resource uninstalls Longhorn and takes the volumes
+  with it. `spec.failurePolicy: abort` keeps a failed install from doing the
+  same thing on its own.
+- Node selectors have to be set at install time. Changing them later restarts
+  every Longhorn component and only fully applies with all volumes detached.
+- `multipath-tools` on a node breaks volume attachment — it claims the block
+  devices first. The role fails the run if it finds it.
 
 ## Notes
 
