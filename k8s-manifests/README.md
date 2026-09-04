@@ -175,6 +175,41 @@ Backblaze B2, MinIO). Leave it out for real S3.
 - `multipath-tools` on a node breaks volume attachment — it claims the block
   devices first. The role fails the run if it finds it.
 
+## Actual Budget
+
+Self-hosted budgeting at `ab.s2n.donkeysharp.xyz`. Manifests live in
+`apps/actual-budget/`. Two things make it different from the other apps here.
+
+**It is the first Longhorn consumer.** The PVC names `storageClassName: longhorn`
+and is `ReadWriteOnce`. Actual keeps its state in SQLite and only one process may
+hold it, so the Deployment is `replicas: 1` with `strategy: Recreate` — a
+RollingUpdate would deadlock on every image bump, with the new pod waiting for a
+volume the old pod still has attached. Any single-writer app added here needs the
+same pair.
+
+**It is the first deliberately public app.** Unlike the Longhorn UI, `ab` gets an
+A record in the DigitalOcean zone pointing at palantir, so it resolves from the
+internet and reaches Traefik over the tunnel. No HAProxy change is needed —
+`roles/l4_proxy` is a host-agnostic TCP forward, so publishing a new hostname is
+only ever a DNS decision.
+
+```bash
+kubectl apply -f apps/actual-budget/
+kubectl rollout status deploy/actual-budget
+```
+
+The shared wildcard certificate already covers the host and its secret lives in
+`default`, so no per-app `Certificate` is needed.
+
+Auth is a single server password set on first load, so set it immediately after
+the first rollout. Multi-user with real accounts exists but requires an OpenID
+provider (`ACTUAL_LOGIN_METHOD=openid`); the image ships `enable-openid.js` and
+`disable-openid.js` under `src/scripts`, so the switch is reversible.
+
+Longhorn backups are still unconfigured, which means this volume is the one place
+in the cluster where the "rebuild if it dies" stance costs real data. Actual's
+built-in file export covers it without setting up a backup target.
+
 ## Notes
 
 - `hello-world` is an http-echo deployment used to validate Traefik ingress.

@@ -55,6 +55,7 @@ Root `group_vars/` is **not** auto-loaded. Ansible only picks up `group_vars/`/`
 - The UI has **no authentication**. `lh.s2n.donkeysharp.xyz` must exist in OpenWrt DNS only; an A record in the DigitalOcean zone would put it on the internet through palantir's HAProxy.
 - Deleting the `HelmChart` resource uninstalls Longhorn and its volumes. `failurePolicy: abort` stops a failed install from doing the same on its own.
 - Backups are not configured (commented `backupTarget` in the chart values), consistent with the Postgres stance.
+- `k8s-manifests/apps/actual-budget` is the only consumer so far. A single-writer app on an RWO volume must pair `replicas: 1` with `strategy: Recreate`, or a RollingUpdate deadlocks waiting for a volume the old pod still holds.
 
 ## Site-to-site VPN
 
@@ -62,6 +63,7 @@ Root `group_vars/` is **not** auto-loaded. Ansible only picks up `group_vars/`/`
 - `galadriel` is the subnet gateway for the LAN `192.168.175.0/24`: palantir's peer `AllowedIPs` carries that CIDR, and galadriel forwards plus MASQUERADEs it so replies come back through the tunnel instead of to the OpenWrt router. The NAT rule lives in `playbooks/site-to-site-vpn.yml`, tagged with the iptables comment `site-to-site subnet gateway`.
 - Both ends must stay in the **same play**. Each host generates its keypair, publishes the public key as a fact, and only then renders its config, reading the peer's key from `hostvars`. Splitting into per-mode plays, adding `serial:`, or `--limit`-ing one end breaks the exchange — the role asserts instead of writing a config with a missing peer.
 - `palantir` also runs HAProxy (`roles/l4_proxy`) as the public entry point: 80/443 are load balanced over the tunnel to Traefik on the k3s node IPs, listed in `inventory/host_vars/palantir.yml`.
+- HAProxy is a plain TCP forward with no SNI or host matching, so whether a hostname is public is decided entirely by DNS: an A record in the DigitalOcean zone puts it on the internet (`ab.s2n.donkeysharp.xyz`), an OpenWrt-only entry keeps it on the LAN (`lh.s2n.donkeysharp.xyz`). Adding a public app needs no Ansible change.
 - Private keys are generated on the host with `creates:` and never regenerated or copied to the control node's fact cache. A peer can also be given a literal `public_key` instead of a `host`, for endpoints Ansible does not manage.
 
 ## Secrets
