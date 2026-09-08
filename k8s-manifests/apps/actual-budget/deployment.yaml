@@ -5,9 +5,9 @@ metadata:
   labels:
     app: actual-budget
 spec:
-  replicas: 1 # do to actual budget architecture, only one replica can run
+  replicas: 1 # due to actual budget architecture, only one replica can run
   strategy:
-    type: Recreate # when rolling a new version, pod must be destroyed, then started
+    type: Recreate # when rolling a new version, pod must be destroyed first, then started. Downtime expected
   selector:
     matchLabels:
       app: actual-budget
@@ -22,7 +22,10 @@ spec:
           persistentVolumeClaim:
             claimName: actual-budget
       securityContext:
-        fsGroup: 1001
+        fsGroup: 1001 # makes the mounted Longhorn volume writable by the app
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
       containers:
         - name: actual-budget
           image: docker.io/actualbudget/actual-server:26.9.0
