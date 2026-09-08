@@ -31,6 +31,9 @@ spec:
           image: docker.io/actualbudget/actual-server:26.9.0
           ports:
             - containerPort: 5006
+          envFrom:
+            - secretRef:
+                name: actual-budget
           volumeMounts:
             - name: data
               mountPath: /data
