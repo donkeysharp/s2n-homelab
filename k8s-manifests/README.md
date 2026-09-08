@@ -201,10 +201,32 @@ kubectl rollout status deploy/actual-budget
 The shared wildcard certificate already covers the host and its secret lives in
 `default`, so no per-app `Certificate` is needed.
 
-Auth is a single server password set on first load, so set it immediately after
-the first rollout. Multi-user with real accounts exists but requires an OpenID
-provider (`ACTUAL_LOGIN_METHOD=openid`); the image ships `enable-openid.js` and
-`disable-openid.js` under `src/scripts`, so the switch is reversible.
+### Authentication
+
+Google OIDC. The `ACTUAL_OPENID_*` values live in `secret.yaml`, committed fully
+commented out — fill it in and apply by hand. The server bootstraps OpenID on
+startup whenever it finds a discovery URL, so `enable-openid.js` never has to be
+run. Register `https://ab.s2n.donkeysharp.xyz/openid/callback` as the redirect URI
+in Google Cloud, and leave the OAuth app's audience on *Testing* with the
+household Gmail addresses as test users — Google then refuses anyone unlisted
+before Actual is even consulted.
+
+**Never set `ACTUAL_USER_CREATION_MODE=login`.** It defaults to `manual`, and that
+default is what makes Actual reject any Google identity that is not already a
+user. Every Google account on the internet can authenticate successfully, so
+`manual` is the only thing between the public URL and the budget. Add people by
+hand in the User Directory, keyed on their Gmail address — Actual derives the
+username from the `email` claim.
+
+`ACTUAL_TOKEN_EXPIRATION` accepts `never`, `openid-provider`, or a number of
+seconds. Avoid `openid-provider`: it pins the session to Google's short-lived
+access token, which Actual never refreshes, so it logs you out roughly hourly. A
+plain number (`604800` for a week) bounds the session without the churn. The value
+is written into the session row at login, so changing it only affects new logins.
+
+The password set at first bootstrap remains the fallback login method. Keep it —
+`kubectl exec -it deploy/actual-budget -- node scripts/disable-openid.js` prompts
+for it to turn OIDC back off.
 
 Longhorn backups are still unconfigured, which means this volume is the one place
 in the cluster where the "rebuild if it dies" stance costs real data. Actual's

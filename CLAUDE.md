@@ -57,6 +57,12 @@ Root `group_vars/` is **not** auto-loaded. Ansible only picks up `group_vars/`/`
 - Backups are not configured (commented `backupTarget` in the chart values), consistent with the Postgres stance.
 - `k8s-manifests/apps/actual-budget` is the only consumer so far. A single-writer app on an RWO volume must pair `replicas: 1` with `strategy: Recreate`, or a RollingUpdate deadlocks waiting for a volume the old pod still holds.
 
+## Actual Budget
+
+- Public at `ab.s2n.donkeysharp.xyz`, single replica on a Longhorn RWO volume, Google OIDC. Manifests in `k8s-manifests/apps/actual-budget/`; details in the README there.
+- **`ACTUAL_USER_CREATION_MODE` must stay `manual`** — that is its default, so the fix is to never set it. `login` auto-creates a user for any identity that authenticates, and with Google as the provider that is the whole internet. Users are added by hand in the User Directory, keyed on the Gmail address.
+- `secret.yaml` is committed fully commented out: it documents the shape, the real values are applied by hand and never land in git.
+
 ## Site-to-site VPN
 
 - Tunnel `wg0` on `10.10.10.0/24` — `palantir` is `.1` (server, listens on UDP 51820), `galadriel` is `.2` (client, keepalive 25 since it is behind NAT).
